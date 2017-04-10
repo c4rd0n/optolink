@@ -74,8 +74,127 @@ public class SocketHandler {
 		}
 	}
 
+	private synchronized void exec(String command, String param1, String param2, PrintStream out) {
+
+		if (log.isTraceEnabled()) {
+			log.trace("Queue Command: |{}|", command);
+			log.trace("      param1 : |{}|", param1);
+			log.trace("      param2 : |{}|", param2);
+		}
+
+		switch (command.toLowerCase()) {
+
+		case "list":
+			list(out);
+			break;
+		case "get":
+			if (param2.equals(""))
+				getThing(param1, out);
+			else
+				getThing(param1, param2, out);
+			break;
+		case "set":
+			set(param1, param2, out);
+			break;
+		default:
+			log.error("Unknown Client Command:", command);
+
+			log.trace("Queue Command: |{}| done", command);
+
+		}
+
+	}
+
+	private void set(String id, String value, PrintStream out) {
+		// Format id = <thing>:<channel>
+
+		String[] ids = id.trim().split(":");
+
+		if (ids.length != 2) {
+			log.error("Wrong format '{}' of id", id);
+			return;
+		}
+		Telegram telegram = config.getThing(ids[0]).getChannel(ids[1]).getTelegram();
+		if (telegram != null) {
+			out.println("<data>");
+			out.println("  <thing id=\"" + ids[0] + "\">");
+
+			out.println("    <channel id=\"" + ids[1] + "\" value=\""
+					+ viessmannHandler.setValue(telegram, value.toUpperCase()) + "\"/>");
+			out.println("  </thing>");
+			out.println("<data>");
+		}
+
+	}
+
+	private void getThing(String id, PrintStream out) {
+		log.debug("Try to get Thing for ID: {}", id);
+		Thing thing = config.getThing(id);
+		if (thing != null) {
+			out.println("<data>");
+			out.println("  <thing id=\"" + thing.getId() + "\">");
+			for (Channel channel : thing.getChannelMap()) {
+				if (!channel.getId().startsWith("*")) {
+					out.println("    <channel id=\"" + channel.getId() + "\" value=\""
+							+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
+				}
+			}
+			out.println("  </thing>");
+			out.println("<data>");
+		}
+	}
+
+	private void getThing(String id, String channels, PrintStream out) {
+		Channel channel;
+		log.debug("Try to get Thing for ID: {} channels: {}", id, channels);
+		String[] channelList = channels.split(",");
+		Thing thing = config.getThing(id);
+		if (thing != null) {
+			out.println("<data>");
+			out.println("  <thing id=\"" + thing.getId() + "\">");
+			for (int i = 0; i < channelList.length; i++) {
+				channel = thing.getChannel(channelList[i]);
+				if (channel != null) {
+					out.println("    <channel id=\"" + channel.getId() + "\" value=\""
+							+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
+				} else {
+					log.error("Channel : {}.{} not define! ", id, channelList[i]);
+				}
+			}
+			out.println("  </thing>");
+			out.println("<data>");
+		}
+	}
+
+	private void list(PrintStream out) {
+		log.debug("List Things for ID");
+		out.println("<define>");
+		for (Thing thing : config.getThingList()) {
+
+			if ((thing != null) && !thing.getId().startsWith("*")) {
+
+				out.println("  <thing id=\"" + thing.getId() + "\" type=\"" + thing.getType() + "\">");
+				// out.println(" <description" + thing.getDescription() +
+				// "</description>");
+				for (Channel channel : thing.getChannelMap()) {
+					if (!channel.getId().startsWith("*")) {
+						out.println("    <channel id=\"" + channel.getId() + "\"/>");
+						// out.println(" <description>" +
+						// channel.getDescription() + "</description>");
+						// out.println(" </channel>");
+					}
+				}
+				out.println("  </thing>");
+
+			}
+		}
+		out.println("</define>");
+
+	}
+
 	public class ServerThread extends Thread {
 		private Socket socket = null;
+		private PrintStream out = null;
 
 		public ServerThread(Socket socket) {
 			super("ServerThread");
@@ -83,8 +202,8 @@ public class SocketHandler {
 		}
 
 		public void run() {
-			try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-					PrintStream out = new PrintStream(socket.getOutputStream());) {
+			try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));) {
+				out = new PrintStream(socket.getOutputStream());
 				out.println("<!-- #Helo from viessmann -->");
 				out.println("<optolink>");
 
@@ -101,156 +220,38 @@ public class SocketHandler {
 				log.info("Connection on Socket {} rejected or closed by client", config.getPort());
 			}
 		}
-	}
 
-	// Start a thread for each call command: No blocking of caller
+		// Start a thread for each call command: No blocking of caller
 
-	public class CommandExec implements Runnable {
+		public class CommandExec implements Runnable {
 
-		String param;
-		PrintStream out;
+			String param;
+			PrintStream out;
 
-		CommandExec(String param, PrintStream out) {
-			this.param = param;
-			this.out = out;
-		}
-
-		public void run() {
-			String command;
-			String param1;
-			String param2;
-
-			log.debug("Execute Thread for: '{}'", param);
-			String[] inStr = param.trim().split(" +");
-			command = inStr[0];
-			if (inStr.length > 1)
-				param1 = inStr[1];
-			else
-				param1 = "";
-			if (inStr.length > 2)
-				param2 = inStr[2];
-			else
-				param2 = "";
-			exec(command, param1, param2);
-			log.debug("Thread for: '{}' done", param);
-		}
-
-		private synchronized void exec(String command, String param1, String param2) {
-
-			if (log.isTraceEnabled()) {
-				log.trace("Queue Command: |{}|", command);
-				log.trace("      param1 : |{}|", param1);
-				log.trace("      param2 : |{}|", param2);
+			CommandExec(String param, PrintStream out) {
+				this.param = param;
+				this.out = out;
 			}
 
-			switch (command.toLowerCase()) {
+			public void run() {
+				String command;
+				String param1;
+				String param2;
 
-			case "list":
-				list();
-				break;
-			case "get":
-				if (param2.equals(""))
-					getThing(param1);
+				log.debug("Execute Thread for: '{}'", param);
+				String[] inStr = param.trim().split(" +");
+				command = inStr[0];
+				if (inStr.length > 1)
+					param1 = inStr[1];
 				else
-					getThing(param1, param2);
-				break;
-			case "set":
-				set(param1, param2);
-				break;
-			default:
-				log.error("Unknown Client Command:", command);
-
-				log.trace("Queue Command: |{}| done", command);
-
+					param1 = "";
+				if (inStr.length > 2)
+					param2 = inStr[2];
+				else
+					param2 = "";
+				exec(command, param1, param2, out);
+				log.debug("Thread for: '{}' done", param);
 			}
-
-		}
-
-		private void set(String id, String value) {
-			// Format id = <thing>:<channel>
-
-			String[] ids = id.trim().split(":");
-
-			if (ids.length != 2) {
-				log.error("Wrong format '{}' of id", id);
-				return;
-			}
-			Telegram telegram = config.getThing(ids[0]).getChannel(ids[1]).getTelegram();
-			if (telegram != null) {
-				out.println("<data>");
-				out.println("  <thing id=\"" + ids[0] + "\">");
-
-				out.println("    <channel id=\"" + ids[1] + "\" value=\""
-						+ viessmannHandler.setValue(telegram, value.toUpperCase()) + "\"/>");
-				out.println("  </thing>");
-				out.println("<data>");
-			}
-
-		}
-
-		private void getThing(String id) {
-			log.debug("Try to get Thing for ID: {}", id);
-			Thing thing = config.getThing(id);
-			if (thing != null) {
-				out.println("<data>");
-				out.println("  <thing id=\"" + thing.getId() + "\">");
-				for (Channel channel : thing.getChannelMap()) {
-					if (!channel.getId().startsWith("*")) {
-						out.println("    <channel id=\"" + channel.getId() + "\" value=\""
-								+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
-					}
-				}
-				out.println("  </thing>");
-				out.println("<data>");
-			}
-		}
-
-		private void getThing(String id, String channels) {
-			Channel channel;
-			log.debug("Try to get Thing for ID: {} channels: {}", id, channels);
-			String[] channelList = channels.split(",");
-			Thing thing = config.getThing(id);
-			if (thing != null) {
-				out.println("<data>");
-				out.println("  <thing id=\"" + thing.getId() + "\">");
-				for (int i = 0; i < channelList.length; i++) {
-					channel = thing.getChannel(channelList[i]);
-					if (channel != null) {
-						out.println("    <channel id=\"" + channel.getId() + "\" value=\""
-								+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
-					} else {
-						log.error("Channel : {}.{} not define! ", id, channelList[i]);
-					}
-				}
-				out.println("  </thing>");
-				out.println("<data>");
-			}
-		}
-
-		private void list() {
-			log.debug("List Things for ID");
-			out.println("<define>");
-			for (Thing thing : config.getThingList()) {
-
-				if ((thing != null) && !thing.getId().startsWith("*")) {
-
-					out.println("  <thing id=\"" + thing.getId() + "\" type=\"" + thing.getType() + "\">");
-					// out.println(" <description" + thing.getDescription() +
-					// "</description>");
-					for (Channel channel : thing.getChannelMap()) {
-						if (!channel.getId().startsWith("*")) {
-							out.println("    <channel id=\"" + channel.getId() + "\"/>");
-							// out.println(" <description>" +
-							// channel.getDescription() + "</description>");
-							// out.println(" </channel>");
-						}
-					}
-					out.println("  </thing>");
-
-				}
-			}
-			out.println("</define>");
-
 		}
 	}
 }
