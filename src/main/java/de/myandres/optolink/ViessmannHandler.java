@@ -56,11 +56,11 @@ public class ViessmannHandler {
 	
 	public synchronized String setValue(Telegram telegram, String value) {
 		byte [] buffer = new byte[16];
-		int locValue=0;
+		int locValue;
 		
 		switch (telegram.getType()) {
 		case Telegram.BOOLEAN:
-			if (value.equals("ON")) buffer[0]=1; else  buffer[0]=0;
+			if (value.equals("ON")) locValue=1; else  locValue=0;
 			break;
 			
 		case Telegram.DATE:
@@ -108,7 +108,7 @@ public class ViessmannHandler {
 			locValue = 9;
 			break;
 		default : float fl = (new Float(value)) * telegram.getDivider(); // all other writable channels are byte or ubyte
-			buffer[0] = (byte) fl;
+			locValue = (byte) fl;
 			break;
 		}
 		if (this.config.getTTYType().matches("URL")) {
