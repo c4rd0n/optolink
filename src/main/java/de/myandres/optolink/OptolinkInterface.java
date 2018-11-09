@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 public class OptolinkInterface {
 
-	static Logger log = LoggerFactory.getLogger(OptolinkInterface.class);
+	private static Logger log = LoggerFactory.getLogger(OptolinkInterface.class);
 
 	private OutputStream output;
 	private InputStream input;

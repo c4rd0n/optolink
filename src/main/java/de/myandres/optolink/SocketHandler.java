@@ -31,9 +31,15 @@ import java.net.Socket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SocketHandler {
+class SocketHandler {
 
-	static Logger log = LoggerFactory.getLogger(SocketHandler.class);
+	private static Logger log = LoggerFactory.getLogger(SocketHandler.class);
+
+	private static final String DATA_OPEN = "<data>";
+	private static final String DATA_CLOSE = "</data>";
+	private static final String THING_OPEN = "  <thing id=\"";
+	private static final String THING_CLOSE = "  </thing>";
+
 
 	private Config config;
 	private ServerSocket server;
@@ -47,7 +53,7 @@ public class SocketHandler {
 		server = new ServerSocket(config.getPort());
 	}
 
-	public void start() {
+	void start() {
 
 		BroadcastListner broadcastListner = new BroadcastListner(config.getPort(), config.getAdapterID());
 
@@ -84,22 +90,22 @@ public class SocketHandler {
 
 		switch (command.toLowerCase()) {
 
-		case "list":
-			list(out);
-			break;
-		case "get":
-			if (param2.equals(""))
-				getThing(param1, out);
-			else
-				getThing(param1, param2, out);
-			break;
-		case "set":
-			set(param1, param2, out);
-			break;
-		default:
-			log.error("Unknown Client Command:", command);
+			case "list":
+				list(out);
+				break;
+			case "get":
+				if (param2.equals(""))
+					getThing(param1, out);
+				else
+					getThing(param1, param2, out);
+				break;
+			case "set":
+				set(param1, param2, out);
+				break;
+			default:
+				log.error("Unknown Client Command: {}", command);
 
-			log.trace("Queue Command: |{}| done", command);
+				log.trace("Queue Command: |{}| done", command);
 
 		}
 
@@ -116,13 +122,11 @@ public class SocketHandler {
 		}
 		Telegram telegram = config.getThing(ids[0]).getChannel(ids[1]).getTelegram();
 		if (telegram != null) {
-			out.println("<data>");
-			out.println("  <thing id=\"" + ids[0] + "\">");
-
-			out.println("    <channel id=\"" + ids[1] + "\" value=\""
-					+ viessmannHandler.setValue(telegram, value.toUpperCase()) + "\"/>");
-			out.println("  </thing>");
-			out.println("<data>");
+			out.println(DATA_OPEN);
+			out.println(THING_OPEN + ids[0] + "\">");
+			printChannel(ids[1], viessmannHandler.setValue(telegram, value.toUpperCase()), out);
+			out.println(THING_CLOSE);
+			out.println(DATA_CLOSE);
 		}
 
 	}
@@ -131,16 +135,15 @@ public class SocketHandler {
 		log.debug("Try to get Thing for ID: {}", id);
 		Thing thing = config.getThing(id);
 		if (thing != null) {
-			out.println("<data>");
-			out.println("  <thing id=\"" + thing.getId() + "\">");
+			out.println(DATA_OPEN);
+			out.println(THING_OPEN + thing.getId() + "\">");
 			for (Channel channel : thing.getChannelMap()) {
 				if (!channel.getId().startsWith("*")) {
-					out.println("    <channel id=\"" + channel.getId() + "\" value=\""
-							+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
+					printChannel(channel.getId(), viessmannHandler.getValue(channel.getTelegram()), out);
 				}
 			}
-			out.println("  </thing>");
-			out.println("<data>");
+			out.println(THING_CLOSE);
+			out.println(DATA_CLOSE);
 		}
 	}
 
@@ -150,19 +153,18 @@ public class SocketHandler {
 		String[] channelList = channels.split(",");
 		Thing thing = config.getThing(id);
 		if (thing != null) {
-			out.println("<data>");
-			out.println("  <thing id=\"" + thing.getId() + "\">");
-			for (int i = 0; i < channelList.length; i++) {
-				channel = thing.getChannel(channelList[i]);
+			out.println(DATA_OPEN);
+			out.println(THING_OPEN + thing.getId() + "\">");
+			for (String channelName : channelList) {
+				channel = thing.getChannel(channelName);
 				if (channel != null) {
-					out.println("    <channel id=\"" + channel.getId() + "\" value=\""
-							+ viessmannHandler.getValue(channel.getTelegram()) + "\"/>");
+					printChannel(channel.getId(), viessmannHandler.getValue(channel.getTelegram()), out);
 				} else {
-					log.error("Channel : {}.{} not define! ", id, channelList[i]);
+					log.error("Channel : {}.{} not define! ", id, channelName);
 				}
 			}
-			out.println("  </thing>");
-			out.println("<data>");
+			out.println(THING_CLOSE);
+			out.println(DATA_CLOSE);
 		}
 	}
 
@@ -173,18 +175,13 @@ public class SocketHandler {
 
 			if ((thing != null) && !thing.getId().startsWith("*")) {
 
-				out.println("  <thing id=\"" + thing.getId() + "\" type=\"" + thing.getType() + "\">");
-				// out.println(" <description" + thing.getDescription() +
-				// "</description>");
+				out.println(THING_OPEN + thing.getId() + "\" type=\"" + thing.getType() + "\">");
 				for (Channel channel : thing.getChannelMap()) {
 					if (!channel.getId().startsWith("*")) {
-						out.println("    <channel id=\"" + channel.getId() + "\"/>");
-						// out.println(" <description>" +
-						// channel.getDescription() + "</description>");
-						// out.println(" </channel>");
+						printChannel(channel.getId(), out);
 					}
 				}
-				out.println("  </thing>");
+				out.println(THING_CLOSE);
 
 			}
 		}
@@ -192,18 +189,30 @@ public class SocketHandler {
 
 	}
 
-	public class ServerThread extends Thread {
-		private Socket socket = null;
-		private PrintStream out = null;
+	private void printChannel(String id, PrintStream out) {
+		printChannel(id, null, out);
+	}
 
-		public ServerThread(Socket socket) {
+	private void printChannel(String id, String value, PrintStream out) {
+		out.print("    <channel id=\"" + id + "\"");
+		if (value != null) {
+			out.print(" value=\"" + value + "\"");
+		}
+		out.println("/>");
+	}
+
+	public class ServerThread extends Thread {
+		private Socket socket;
+
+		ServerThread(Socket socket) {
 			super("ServerThread");
 			this.socket = socket;
 		}
 
+		@Override
 		public void run() {
-			try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));) {
-				out = new PrintStream(socket.getOutputStream());
+			try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+				PrintStream out = new PrintStream(socket.getOutputStream());
 				out.println("<!-- #Helo from viessmann -->");
 				out.println("<optolink>");
 

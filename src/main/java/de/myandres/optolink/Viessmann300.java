@@ -116,14 +116,20 @@ public class Viessmann300 implements ViessmannProtocol {
 
             // check RxD 
            int returnAddress;
-           if (localBuffer[0] == 0x03) 
-        	   log.error("Answer Byte is 0x03: Return Error(Wrong Adress,maybe)");
-           if (localBuffer[0] != 0x01) 
-        	   log.error("Answer Byte (0x01) expect, but: 0x{} resived", 
+           if (localBuffer[0] == 0x03) {
+               log.error("Answer Byte is 0x03: Return Error(Wrong Adress,maybe)");
+               return 0;
+           }
+           if (localBuffer[0] != 0x01) {
+        	   log.error("Answer Byte (0x01) expect, but: 0x{} received", 
         			   String.format("%02X", localBuffer[0]));
-           if (localBuffer[1] != 0x02) 
-        	   log.error("Data Write Byte (0x02) expect, but: 0x{} resived",
+        	   return 0;
+           }
+           if (localBuffer[1] != 0x02) {
+        	   log.error("Data Write Byte (0x02) expect, but: 0x{} received",
         			   String.format("%02X",buffer[1]));
+               return 0;
+           }
            returnAddress = ((localBuffer[2] & 0xFF) << 8) + ((int)localBuffer[3] & 0xFF); // Address
            if (returnAddress != address) 
         	   log.error(String.format("Adress (%04X) expect, but: %04X resived", address, returnAddress));
