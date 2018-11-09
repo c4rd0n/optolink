@@ -53,17 +53,17 @@ public class Viessmann300 implements ViessmannProtocol {
            if ( transmit(localBuffer,5)) {;         // send Buffer 
 
             // RxD
-            returNumberOfBytes = resive(localBuffer);  // read answer 
+            returNumberOfBytes = receive(localBuffer);  // read answer
             
             if (returNumberOfBytes > 0) {
 
                 // check RxD 
                int returnAddress;
                if (localBuffer[0] == 0x03) log.error("Answer Byte is 0x03: Return Error(Wrong Adress,maybe)");
-               if (localBuffer[0] != 0x01) log.error("Answer Byte (0x01) expect, but: 0x{} resived", String.format("%02X", localBuffer[0]));
-               if (localBuffer[1] != 0x01) log.error("DataRead Byte (0x01) expect, but: 0x{} resived", String.format("%02X",buffer[1]));
+               if (localBuffer[0] != 0x01) log.error("Answer Byte (0x01) expect, but: 0x{} received", String.format("%02X", localBuffer[0]));
+               if (localBuffer[1] != 0x01) log.error("DataRead Byte (0x01) expect, but: 0x{} received", String.format("%02X",buffer[1]));
                returnAddress = ((localBuffer[2] & 0xFF) << 8) + ((int)localBuffer[3] & 0xFF); // Address
-               if (returnAddress != address) log.error(String.format("Adress (%04X) expect, but: %04X resived", address, returnAddress));
+               if (returnAddress != address) log.error(String.format("Adress (%04X) expect, but: %04X received", address, returnAddress));
                for (int j=0;j<localBuffer[4];j++) buffer[j] =localBuffer[j+5];  // copy Result 
                log.debug(String.format("Data for address %04X got ", address)); 
                return (returNumberOfBytes-5); // buffer length
@@ -110,7 +110,7 @@ public class Viessmann300 implements ViessmannProtocol {
        if ( transmit(localBuffer,5+length)) {;         // send Buffer 
 
         // RxD
-        returNumberOfBytes = resive(localBuffer);  // read answer 
+        returNumberOfBytes = receive(localBuffer);  // read answer
         
         if (returNumberOfBytes > 0) {
 
@@ -121,7 +121,7 @@ public class Viessmann300 implements ViessmannProtocol {
                return 0;
            }
            if (localBuffer[0] != 0x01) {
-        	   log.error("Answer Byte (0x01) expect, but: 0x{} received", 
+        	   log.error("Answer Byte (0x01) expect, but: 0x{} received",
         			   String.format("%02X", localBuffer[0]));
         	   return 0;
            }
@@ -185,7 +185,7 @@ public class Viessmann300 implements ViessmannProtocol {
         	optolinkInterface.write(0x04);              //  close communication
             ret = optolinkInterface.read();
             if (ret == 0x06) {
-                  log.trace("[ACK] resived");
+                  log.trace("[ACK] received");
               log.debug("Session to optolink closed");
               return; // Close  OK
             }
@@ -199,7 +199,7 @@ public class Viessmann300 implements ViessmannProtocol {
 }
 
     // RxD Telegram
-    private synchronized int resive(byte[] buffer) {
+    private synchronized int receive(byte[] buffer) {
             log.debug("Get Data from OptolinkInterface ...");
             int ret=optolinkInterface.read();
             if (ret != 0x41) {
@@ -220,7 +220,7 @@ public class Viessmann300 implements ViessmannProtocol {
             returnChecksum = returnChecksum & 0xFF;         //expected checksum 8 low bit's .
             int bufferChecksum=optolinkInterface.read();    // read checksum 
             if (returnChecksum != bufferChecksum) {
-            	log.error(String.format("Checksumme (%#02X) expect, but %#02X resived", returnChecksum, bufferChecksum));
+            	log.error(String.format("Checksumme (%#02X) expect, but %#02X received", returnChecksum, bufferChecksum));
             }
             log.debug("Data from OptolinkInterface got [OK]");
             if (log.isTraceEnabled()) {
@@ -259,9 +259,9 @@ public class Viessmann300 implements ViessmannProtocol {
             //  Wait for Acknowledge (0x06)
             int ret =optolinkInterface.read();
             if (ret != 0x06){
-                    log.error(String.format("acknowledge (0x06) expect, but: %02X resived", ret));
+                    log.error(String.format("acknowledge (0x06) expect, but: %02X received", ret));
                     if (ret == 0x05) {
-                    	log.info(String.format("0x05 resived: Session maybe stoped! Try to restart session"));
+                    	log.info(String.format("0x05 received: Session maybe stopped! Try to restart session"));
                     	startSession();
                     }
                     return false;

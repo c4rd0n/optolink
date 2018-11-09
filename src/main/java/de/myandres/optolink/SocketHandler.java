@@ -5,7 +5,7 @@
  * are made available under the terms of the GNU Lesser General Public License
  * (LGPL) version 3.0 which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0.html
- *  
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
@@ -14,11 +14,11 @@
 package de.myandres.optolink;
 
 /*
- * Install a Socked Handler for ip communication 
- * 
+ * Install a Socked Handler for ip communication
+ *
  * Server can found via Broadcast
  * Server API Client can connect via TCP
- * 
+ *
  */
 
 import java.io.BufferedReader;
@@ -53,26 +53,26 @@ class SocketHandler {
 		server = new ServerSocket(config.getPort());
 	}
 
-	void start() {
+    public void start() {
 
-		BroadcastListner broadcastListner = new BroadcastListner(config.getPort(), config.getAdapterID());
+        BroadcastListner broadcastListner = new BroadcastListner(config.getPort(), config.getAdapterID());
 
-		// Put broadcast listner in background
+        // Put broadcast listner in background
 
-		Thread broadcastListnerThread = new Thread(broadcastListner);
-		broadcastListnerThread.setName("BcListner");
-		broadcastListnerThread.start();
+        Thread broadcastListnerThread = new Thread(broadcastListner);
+        broadcastListnerThread.setName("BcListner");
+        broadcastListnerThread.start();
 
-		// Wait connection
+        // Wait connection
 
-		while (true) {
-			try {
-				log.info("Listen on port {} for connection", config.getPort());
-				Socket socket = server.accept();
-				log.info("Connection on port {} accept. Remote host {}", config.getPort(),
-						socket.getRemoteSocketAddress());
-				new ServerThread(socket).start();
-			}
+        while (true) {
+            try {
+                log.info("Listen on port {} for connection", config.getPort());
+                Socket socket = server.accept();
+                log.info("Connection on port {} accept. Remote host {}", config.getPort(),
+                        socket.getRemoteSocketAddress());
+                new ServerThread(socket).start();
+            }
 
 			catch (Exception e) {
 				log.info("Connection on Socket {} rejected or closed by client", config.getPort());
