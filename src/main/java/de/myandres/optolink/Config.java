@@ -17,6 +17,9 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.myandres.optolink.entity.Channel;
+import de.myandres.optolink.entity.Telegram;
+import de.myandres.optolink.entity.Thing;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
@@ -268,7 +271,7 @@ public class Config {
 				channel = new Channel (attr.getValue("id"));
 				break;
 			case "root.optolink.thing.channel.telegram":
-				channel.setTelegram(new Telegram(attr.getValue("address"), 
+				channel.setTelegram(new Telegram(attr.getValue("address"),
 						                         attr.getValue("type"), 
 						                         attr.getValue("divider")));
 				break;

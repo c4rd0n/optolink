@@ -13,6 +13,8 @@
  *******************************************************************************/
 package de.myandres.optolink;
 
+import de.myandres.optolink.socket.SocketHandler;
+import de.myandres.optolink.viessmann.ViessmannHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
