@@ -13,6 +13,7 @@
  *******************************************************************************/
 package de.myandres.optolink;
 
+import de.myandres.optolink.config.Config;
 import de.myandres.optolink.socket.SocketHandler;
 import de.myandres.optolink.viessmann.ViessmannHandler;
 import org.slf4j.Logger;
@@ -20,21 +21,18 @@ import org.slf4j.LoggerFactory;
 
 public class Main {
 
-	static Logger log = LoggerFactory.getLogger(Main.class);
+	private static Logger log = LoggerFactory.getLogger(Main.class);
 
 	// Central Classes, singular only!!
-	static Config config;
-	static ViessmannHandler viessmannHandler;
-	static OptolinkInterface optolinkInterface;
+	private static Config config;
+	private static ViessmannHandler viessmannHandler;
+	private static OptolinkInterface optolinkInterface;
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
 		log.info("Programm gestartet");
 
 		try {
 
-			// config = new Config("src/main/resources/optolink.xml");
 			config = new Config("conf/optolink.xml");
 
 			// Init TTY Handling for Optolink
@@ -51,14 +49,12 @@ public class Main {
 		}
 
 		// Install catcher for Kill Signal
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				viessmannHandler.close();
-				optolinkInterface.close();
-				log.info("Programm normal terminated by Signal (Kill)");
-			}
-		});
+		Runtime.getRuntime().addShutdownHook(
+				new Thread(()->{
+					viessmannHandler.close();
+					optolinkInterface.close();
+					log.info("Programm normal terminated by Signal (Kill)");
+				}));
 
 		try {
 

@@ -15,7 +15,7 @@ package de.myandres.optolink.viessmann;
 
 import java.util.Locale;
 
-import de.myandres.optolink.Config;
+import de.myandres.optolink.config.Config;
 import de.myandres.optolink.OptolinkInterface;
 import de.myandres.optolink.entity.Telegram;
 import org.slf4j.Logger;

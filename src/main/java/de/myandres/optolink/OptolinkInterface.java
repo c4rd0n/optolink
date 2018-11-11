@@ -13,6 +13,7 @@
  *******************************************************************************/
 package de.myandres.optolink;
 
+import de.myandres.optolink.config.Config;
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
