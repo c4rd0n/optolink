@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
+import java.util.Optional;
 
 public class CommandExec implements Runnable {
 
@@ -99,11 +100,16 @@ public class CommandExec implements Runnable {
             log.error("Wrong format '{}' of id", id);
             return;
         }
-        Telegram telegram = config.getThing(ids[0]).getChannel(ids[1]).getTelegram();
-        if (telegram != null) {
+        Optional<Thing> optionalThing = config.getThing(ids[0]);
+        if (!optionalThing.isPresent()) return;
+        Optional<Channel> optionalChannel = optionalThing.get().getChannel(ids[1]);
+        if (!optionalChannel.isPresent()) return;
+        Optional<Telegram> telegram = optionalChannel.get().getTelegram();
+        if (telegram.isPresent()) {
             out.println(DATA_OPEN);
             out.println(THING_OPEN + ids[0] + "\">");
-            printChannel(ids[1], viessmannHandler.setValue(telegram, value.toUpperCase()));
+            viessmannHandler.setValue(telegram.get(), value.toUpperCase())
+                    .ifPresent((String retValue) -> printChannel(ids[1], retValue));
             out.println(THING_CLOSE);
             out.println(DATA_CLOSE);
         }
@@ -112,33 +118,21 @@ public class CommandExec implements Runnable {
 
     private void getThing(String id) {
         log.debug("Try to get Thing for ID: {}", id);
-        Thing thing = config.getThing(id);
-        if (thing != null) {
-            out.println(DATA_OPEN);
-            out.println(THING_OPEN + thing.getId() + "\">");
-            for (Channel channel : thing.getChannelMap()) {
-                if (!channel.getId().startsWith("*")) {
-                    printChannel(channel.getId(), viessmannHandler.getValue(channel.getTelegram()));
-                }
-            }
-            out.println(THING_CLOSE);
-            out.println(DATA_CLOSE);
-        }
+        config.getThing(id).ifPresent(this::printThingFromList);
     }
 
     private void getThing(String id, String channels) {
-        Channel channel;
         log.debug("Try to get Thing for ID: {} channels: {}", id, channels);
         String[] channelList = channels.split(",");
-        Thing thing = config.getThing(id);
-        if (thing != null) {
+        Optional<Thing> optionalThing = config.getThing(id);
+        if (optionalThing.isPresent()) {
+            Thing thing = optionalThing.get();
             out.println(DATA_OPEN);
             out.println(THING_OPEN + thing.getId() + "\">");
             for (String channelName : channelList) {
-                channel = thing.getChannel(channelName);
-                if (channel != null) {
-                    printChannel(channel.getId(), viessmannHandler.getValue(channel.getTelegram()));
-                } else {
+                Optional<Channel> channel = thing.getChannel(channelName);
+                channel.ifPresent(this::getChannelValueAndPrint);
+                if (!channel.isPresent()) {
                     log.error("Channel : {}.{} not define! ", id, channelName);
                 }
             }
@@ -150,22 +144,27 @@ public class CommandExec implements Runnable {
     private void list() {
         log.debug("List Things for ID");
         out.println("<define>");
-        for (Thing thing : config.getThingList()) {
-
-            if ((thing != null) && !thing.getId().startsWith("*")) {
-
-                out.println(THING_OPEN + thing.getId() + "\" type=\"" + thing.getType() + "\">");
-                for (Channel channel : thing.getChannelMap()) {
-                    if (!channel.getId().startsWith("*")) {
-                        printChannel(channel.getId());
-                    }
-                }
-                out.println(THING_CLOSE);
-
-            }
-        }
+        config.getThingList().stream()
+                .filter(thing -> thing != null && !thing.getId().startsWith("*"))
+                .forEach(this::printThingFromList);
         out.println("</define>");
 
+    }
+
+    private void printThingFromList(Thing thing) {
+        out.println(DATA_OPEN);
+        out.println(THING_OPEN + thing.getId() + "\" type=\"" + thing.getType() + "\">");
+        thing.getChannelMap().stream()
+                .filter(channel -> !channel.getId().startsWith("*"))
+                .forEach(channel -> printChannel(channel.getId()));
+        out.println(THING_CLOSE);
+        out.println(DATA_CLOSE);
+    }
+
+    private void getChannelValueAndPrint(Channel channel) {
+        channel.getTelegram().ifPresent(
+                telegram -> viessmannHandler.getValue(telegram)
+                        .ifPresent(value -> printChannel(channel.getId(), value)));
     }
 
     private void printChannel(String id) {

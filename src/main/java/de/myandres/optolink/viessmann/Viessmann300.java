@@ -13,7 +13,7 @@
  *******************************************************************************/
 package de.myandres.optolink.viessmann;
 
-import de.myandres.optolink.OptolinkInterface;
+import de.myandres.optolink.optointerface.OptolinkInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

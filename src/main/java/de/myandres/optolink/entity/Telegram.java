@@ -18,19 +18,19 @@ import org.slf4j.LoggerFactory;
 
 public class Telegram {
 
-	static Logger log = LoggerFactory.getLogger(Telegram.class);
+	private static Logger log = LoggerFactory.getLogger(Telegram.class);
 	
 	// Types of Viessmann 
-	public final static byte BOOLEAN =   1; // 1 Byte -> boolean
-	public final static byte BYTE    =   2; // 1 Byte -> short
-	public final static byte UBYTE   =   3; // 1 Byte -> short
-	public final static byte SHORT  =    4; // 2 Byte -> int
-	public final static byte USHORT =    5; // 2 Byte -> int
-	public final static byte INT =       6; // 4 byte -> long
-    public final static byte UINT =      7; // 4 Byte -> long
-    public final static byte DATE =      8; // 8 Byte -> date
-    public final static byte TIMER =     9; // 8 Byte -> timer
-    public final static byte DUMP =      99; // Dump for unknown Telegram-Type
+	public static final byte BOOLEAN =   1; // 1 Byte -> boolean
+	public static final byte BYTE    =   2; // 1 Byte -> short
+	public static final byte UBYTE   =   3; // 1 Byte -> short
+	public static final byte SHORT  =    4; // 2 Byte -> int
+	public static final byte USHORT =    5; // 2 Byte -> int
+	public static final byte INT =       6; // 4 byte -> long
+    public static final byte UINT =      7; // 4 Byte -> long
+    public static final byte DATE =      8; // 8 Byte -> date
+    public static final byte TIMER =     9; // 8 Byte -> timer
+    public static final byte DUMP =      99; // Dump for unknown Telegram-Type
 
     
 	private int address; 
@@ -39,7 +39,7 @@ public class Telegram {
 	private short divider; 
 
 	
-	Telegram() {
+	public Telegram() {
     	address = 0;
 		type = Telegram.DUMP;
 		length = 0;
@@ -63,7 +63,7 @@ public class Telegram {
 	}
 
  
-	public void setAddress(String address) {
+	private void setAddress(String address) {
 		log.trace("----------------------------------------");
 		
 		if (address==null) {
@@ -82,7 +82,7 @@ public class Telegram {
 
 	
 
-	public void setType(String type) {
+	private void setType(String type) {
 		if (type == null)
 			log.error("Telegram Type not set");
 		else {
@@ -123,18 +123,16 @@ public class Telegram {
 				this.type = Telegram.TIMER;
 				length=8;
 				break;
-			default: {
+			default:
 				log.error("Unknown Type: {}", type);
 				this.type = Telegram.DUMP;
 				length=0;
-
-			}
 			}
 		}
 		log.trace("Set Type to {}({}) length={}", type, this.type, length);
 	}
 	
-	public void setDivider(String divider) {
+	private void setDivider(String divider) {
 		if (divider==null) {
 			log.debug("divider not set - set to default: 1"); 
 		    this.divider=1;
@@ -155,15 +153,9 @@ public class Telegram {
 		return address;
 	}
 	
-	public String getAddressAsString() {
-		return String.format("%04X", address);
-	}
-	
-	
 	public int getLength() {
 		return length;
 	}
-
 
 	public short getDivider() {
 		return divider;

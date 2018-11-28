@@ -13,29 +13,30 @@
  *******************************************************************************/
 package de.myandres.optolink.viessmann;
 
-import java.util.Locale;
-
 import de.myandres.optolink.config.Config;
-import de.myandres.optolink.OptolinkInterface;
 import de.myandres.optolink.entity.Telegram;
+import de.myandres.optolink.optointerface.OptolinkException;
+import de.myandres.optolink.optointerface.OptolinkInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ViessmannHandler {
-	static Logger log = LoggerFactory.getLogger(ViessmannHandler.class);
+	private static Logger log = LoggerFactory.getLogger(ViessmannHandler.class);
 	private ViessmannProtocol viessmannProtocol;
 	private OptolinkInterface optolinkInterface;
 	private Config config;
-	private String interfaceProtocol;
 
 	public ViessmannHandler(Config config, OptolinkInterface optolinkInterface) {
 
-		log.debug("Init Handler for Protokoll {} ...", interfaceProtocol);
+		log.debug("Init Handler for Protokoll {} ...", optolinkInterface);
 		this.config = config;
 		this.optolinkInterface = optolinkInterface;
-		interfaceProtocol = config.getProtocol();
+		String interfaceProtocol = config.getProtocol();
 		switch (interfaceProtocol) {
 		case "300":
 			viessmannProtocol = new Viessmann300(optolinkInterface);
@@ -57,21 +58,21 @@ public class ViessmannHandler {
 	}
 
 
-	public synchronized String setValue(Telegram telegram, String value) {
+	public synchronized Optional<String> setValue(Telegram telegram, String value) {
 		byte [] buffer = new byte[16];
 		int locValue;
 
 		switch (telegram.getType()) {
 		case Telegram.BOOLEAN:
-			if (value.equals("ON")) locValue=1; else  locValue=0;
+			locValue = "ON".equals(value) ? 1 : 0;
 			break;
 
 		case Telegram.DATE:
 			log.error("Update of Date not implemented");
-			return null	;
+			return Optional.empty()	;
 		case Telegram.TIMER: // Receiving a string of format: "On:--:--Off:--:--On:--:--Off:--:--On:--:--Off:--:--On:--:-- Off:--:--"
 			String[] switchTimes = new String[8];
-			String[] timeParts = new String[2];
+			String[] timeParts;
 			int hr;
 			int min;
 			int switchTimesLength = 0;
@@ -87,12 +88,12 @@ public class ViessmannHandler {
 					timeParts = switchTimes[i].split(":");
 					hr = Integer.parseInt(timeParts[0]);
 					min = Integer.parseInt(timeParts[1]);
-					if (hr > 23 | hr < 0 | min > 59 | min < 0) {
-						log.error("Invalid time. Hour %d has to between 0 and 23 and Minute %d between 0 and 59", hr,min);
-						return null;
+					if (hr > 23 || hr < 0 || min > 59 || min < 0) {
+						log.error("Invalid time. Hour {} has to between 0 and 23 and Minute {} between 0 and 59", hr,min);
+						return Optional.empty();
 					}
 					hr = hr << 3;
-					min = (int) min/10;
+					min = min/10;
 					buffer[i] = (byte) (hr | min);
 				}
 				for (int i = switchTimesLength; i < 8; i++) {
@@ -100,13 +101,14 @@ public class ViessmannHandler {
 				}
 				for (int i = 0; i < 8; i+=2) {
 					if ((buffer[i] & 0xff) > (buffer[i+1] & 0xff)) {
-						log.error("Invalid time pair. On time %02x if bigger than Off time %02x", buffer[i],buffer[i+1]);
-						return null;
+						if(log.isErrorEnabled())
+							log.error(String.format("Invalid time pair. On time %02x if bigger than Off time %02x", buffer[i],buffer[i+1]));
+						return Optional.empty();
 					}
 				}
 			} else {
 				log.error("Error! SwitchTime has to be in on/off pairs");
-				return null;
+				return Optional.empty();
 			}
 			locValue = 9;
 			break;
@@ -117,10 +119,10 @@ public class ViessmannHandler {
 		if (this.config.getTTYType().matches("URL")) {
 			try {
 				optolinkInterface.open();
-			} catch (Exception e) {
+			} catch (OptolinkException e) {
 				log.error("Opening TTY type URL failed");
 				optolinkInterface.close();
-				return null;
+				return Optional.empty();
 			}
 		}
 		int resultLength = viessmannProtocol.setData(buffer, telegram.getAddress() , telegram.getLength(), locValue);
@@ -128,14 +130,14 @@ public class ViessmannHandler {
 			optolinkInterface.close();
 		}
 
-		if (resultLength == 0) return null;
-        else return formatValue(buffer, telegram.getType(), telegram.getDivider());
+		if (resultLength == 0) return Optional.empty();
+        else return Optional.of(formatValue(buffer, telegram.getType(), telegram.getDivider()));
 
 	}
 
 
 
-	public synchronized String getValue(Telegram telegram)  {
+	public synchronized Optional<String> getValue(Telegram telegram)  {
 		byte [] buffer = new byte[16];
 
 		if (this.config.getTTYType().matches("URL")) {
@@ -144,7 +146,7 @@ public class ViessmannHandler {
 			} catch (Exception e) {
 				log.error("Opening TTY type URL failed");
 				optolinkInterface.close();
-				return null;
+				return Optional.empty();
 			}
 		}
 		int resultLength=viessmannProtocol.getData(buffer,telegram.getAddress(), telegram.getLength());
@@ -155,7 +157,7 @@ public class ViessmannHandler {
 		if (this.config.getTTYType().matches("URL")) {
 			optolinkInterface.close();
 		}
-		return formatValue(buffer, telegram.getType(), telegram.getDivider());
+		return Optional.of(formatValue(buffer, telegram.getType(), telegram.getDivider()));
 
 	}
 

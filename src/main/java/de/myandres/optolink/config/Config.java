@@ -24,6 +24,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /*
  * Contains Data from xml-File 
@@ -95,13 +96,13 @@ public class Config {
 		return thingList;
 	}
 
-	public Thing getThing(String id) {
+	public Optional<Thing> getThing(String id) {
 		log.trace("get thing id: {}", id);
 		for (Thing thing : thingList) {
-			if(thing.getId().equals(id)) return thing;
+			if(thing.getId().equals(id)) return Optional.of(thing);
 		}
 		log.error("Add thing id: {} not found", id);
-		return null;
+		return Optional.empty();
 	}
 	
 

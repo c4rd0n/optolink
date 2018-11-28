@@ -13,25 +13,22 @@
  *******************************************************************************/
 package de.myandres.optolink.entity;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Thing {
 	 
-	static Logger logger = LoggerFactory.getLogger(Thing.class);
+	private static Logger logger = LoggerFactory.getLogger(Thing.class);
 
 	private String type;
 	private String id;
 	private String description;
-	private Map<String,Channel> channelMap = new HashMap<String,Channel>();
+	private Map<String,Channel> channelMap = new HashMap<>();
 	
 	public List<Channel> getChannelMap() {
-		return new ArrayList<Channel>(channelMap.values());
+		return new ArrayList<>(channelMap.values());
 	}
 
 	public Thing(String id, String type) {
@@ -39,7 +36,7 @@ public class Thing {
 		channelMap.clear();
 		this.type = type;
 		this.id = id;
-		this.description = null;;
+		this.description = null;
 	}
 	
 	public Thing(Thing thing) {
@@ -80,8 +77,8 @@ public class Thing {
 		channelMap.put(channel.getId(), new Channel(channel));
 	}
 	
-	public Channel getChannel(String id) {
-		return channelMap.get(id);	
+	public Optional<Channel> getChannel(String id) {
+		return Optional.ofNullable(channelMap.get(id));
 	}
 
 
