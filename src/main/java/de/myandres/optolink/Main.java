@@ -15,8 +15,10 @@ package de.myandres.optolink;
 
 import de.myandres.optolink.config.Config;
 import de.myandres.optolink.optointerface.OptolinkInterface;
+import de.myandres.optolink.optointerface.OptolinkInterfaceFactory;
 import de.myandres.optolink.socket.SocketHandler;
 import de.myandres.optolink.viessmann.ViessmannHandler;
+import de.myandres.optolink.viessmann.ViessmannHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,38 +28,36 @@ public class Main {
 
 	// Central Classes, singular only!!
 	private static Config config;
-	private static ViessmannHandler viessmannHandler;
-	private static OptolinkInterface optolinkInterface;
 
 	public static void main(String[] args) {
 		log.info("Programm gestartet");
 
 		try {
-
 			config = new Config("conf/optolink.xml");
-
-			// Init TTY Handling for Optolink
-			optolinkInterface = new OptolinkInterface(config);
-
-			// Init ViessmannHandler
-			viessmannHandler = new ViessmannHandler(config, optolinkInterface);
-
 		} catch (Exception e) {
 			log.error("Something is wrong not init", e);
-			viessmannHandler.close();
-			optolinkInterface.close();
 			System.exit(1);
 		}
 
-		// Install catcher for Kill Signal
-		Runtime.getRuntime().addShutdownHook(
-				new Thread(()->{
-					viessmannHandler.close();
-					optolinkInterface.close();
-					log.info("Programm normal terminated by Signal (Kill)");
-				}));
-
-		try {
+		try (
+				OptolinkInterface optolinkInterface = OptolinkInterfaceFactory.getOptolinkInterface(config);
+				ViessmannHandler viessmannHandler = ViessmannHandlerFactory.getViessmannHandler(config, optolinkInterface)
+		) {
+			// Install catcher for Kill Signal
+			Runtime.getRuntime().addShutdownHook(
+					new Thread(() -> {
+						try {
+							viessmannHandler.close();
+						} catch (Exception e) {
+							log.error("Closure ViessmannHandler failed", e);
+						}
+						try {
+							optolinkInterface.close();
+						} catch (Exception e) {
+							log.error("Closure OptolinkInterface failed", e);
+						}
+						log.info("Programm normal terminated by Signal (Kill)");
+					}));
 
 			// Start SocketHandler
 			SocketHandler socketHandler = new SocketHandler(config, viessmannHandler);

@@ -13,11 +13,13 @@
  *******************************************************************************/
 package de.myandres.optolink.socket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BroadcastListner implements Runnable {
 	
@@ -78,8 +80,7 @@ public class BroadcastListner implements Runnable {
 					}
 			}
 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) {
 			log.error("Something is wrong in broadcast listner thread!!! Diagnostic {}", e);
 			log.error("Broadcast Listner die");
 		}

@@ -21,14 +21,14 @@ package de.myandres.optolink.socket;
  *
  */
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-
 import de.myandres.optolink.config.Config;
 import de.myandres.optolink.viessmann.ViessmannHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class SocketHandler {
 
@@ -64,11 +64,12 @@ public class SocketHandler {
                 Socket socket = server.accept();
                 log.info("Connection on port {} accept. Remote host {}", config.getPort(),
                         socket.getRemoteSocketAddress());
-                new SocketSession(socket,config,viessmannHandler).start();
-            }
-
-			catch (Exception e) {
+				new SocketSession(socket, config, viessmannHandler).start();
+			} catch (IOException e) {
 				log.info("Connection on Socket {} rejected or closed by client", config.getPort());
+			} catch (RuntimeException e) {
+				log.error("Error on Socket {} : {}", config.getPort(), e.getMessage(), e);
+				break;
 			}
 		}
 	}
